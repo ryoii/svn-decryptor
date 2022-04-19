@@ -1,0 +1,15 @@
+[package]
+name = "svn-decryptor"
+version = "1.0.0"
+authors = ["ryoii"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+base64 = "0.13.0"
+winapi = { version = "0.3", default-features = false, features = ["dpapi", "wincrypt"] }
+
+[profile.release]
+lto = true
+panic = "abort"
