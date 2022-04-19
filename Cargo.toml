@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 base64 = "0.13.0"
 winapi = { version = "0.3", default-features = false, features = ["dpapi", "wincrypt"] }
+anyhow = "1.0"
 
 [profile.release]
 lto = true

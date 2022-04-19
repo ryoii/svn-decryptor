@@ -2,28 +2,27 @@ use std::{env, fs, ptr};
 use winapi::um::dpapi::CryptUnprotectData;
 use winapi::um::wincrypt::DATA_BLOB;
 use std::collections::{hash_map, HashMap};
+use anyhow::{anyhow, Result};
 
-fn main() {
+fn main() -> Result<()> {
     let app_data_fold = env::var_os("APPDATA")
-        .expect("Can't find environment value: APPDATA")
-        .into_string()
-        .expect("Can't find environment value: APPDATA");
+        .ok_or(anyhow!("Can't find environment value: APPDATA"))?
+        .into_string().unwrap();
 
     let auth_fold = app_data_fold + "\\Subversion\\auth\\svn.simple";
 
-    let dir = fs::read_dir(&auth_fold)
-        .expect("Can't find or open subversion data fold");
+    let dir = fs::read_dir(&auth_fold)?;
 
     for path in dir {
-        let data = fs::read_to_string(path.unwrap().path())
-            .expect(&*format!("Read file failed in {}", &auth_fold));
+        let data = fs::read_to_string(path.unwrap().path())?;
 
-        let auth_file = AuthFile::from_raw_context(&data);
-        let password = decrypt(auth_file.password());
+        let auth_file = AuthFile::from_raw_context(&data)?;
+        let password = decrypt(auth_file.password()?)?;
 
-        println!("{}\r\n{}", auth_file.username(), password);
-    }
+        println!("{}\r\n{}", auth_file.username()?, password);
+    };
 
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -40,7 +39,7 @@ enum State {
 }
 
 impl AuthFile {
-    fn from_raw_context(context: &str) -> AuthFile {
+    fn from_raw_context(context: &str) -> Result<AuthFile> {
         let lines = context.lines();
         let mut opt = HashMap::new();
         let mut len = 0usize;
@@ -53,7 +52,9 @@ impl AuthFile {
                     "END" => break,
                     _ => {
                         let (_t, l) = Self::parse_def_line(line);
-                        assert_eq!(_t, "K", "Unexpect data format.");
+                        if _t != "K" {
+                            return Err(anyhow!("Unexpect data format."));
+                        };
                         len = l;
                         State::KeyValue
                     }
@@ -64,7 +65,9 @@ impl AuthFile {
                 }
                 State::ValueDef => {
                     let (_t, l) = Self::parse_def_line(line);
-                    assert_eq!(_t, "V", "Unexpect data format.");
+                    if _t != "V" {
+                        return Err(anyhow!("Unexpect data format."));
+                    }
                     len = l;
                     State::ValValue
                 }
@@ -76,29 +79,28 @@ impl AuthFile {
             }
         };
 
-        AuthFile { opt }
+        Ok(AuthFile { opt })
     }
 
     fn parse_def_line(line: &str) -> (&str, usize) {
         let mut split = line.split(" ");
-        let t = split.next().expect("");
-        let len = split.next().expect("");
-        let len = len.parse::<usize>().expect("");
+        let t = split.next().unwrap_or("");
+        let len = split.next().unwrap_or("");
+        let len = len.parse::<usize>().unwrap_or(0);
         return (t, len);
     }
 
-    fn username(&self) -> &str {
-        self.opt.get("username").unwrap()
+    fn username(&self) -> Result<&String> {
+        self.opt.get("username").ok_or(anyhow!("Can't found username"))
     }
 
-    fn password(&self) -> &str {
-        self.opt.get("password").unwrap()
+    fn password(&self) -> Result<&String> {
+        self.opt.get("password").ok_or(anyhow!("Can't found password"))
     }
 }
 
-fn decrypt(encrypted: &str) -> String {
-    let mut raw_data = base64::decode(encrypted)
-        .expect("Invalid data input.");
+fn decrypt(encrypted: &str) -> Result<String> {
+    let mut raw_data = base64::decode(encrypted)?;
 
     let mut data_in = DATA_BLOB {
         cbData: raw_data.len() as u32,
@@ -120,7 +122,7 @@ fn decrypt(encrypted: &str) -> String {
         ) as u8
     };
     if res == 0 {
-        panic!("Decrypt failed. Run this program in the correct machine.")
+        return Err(anyhow!("Decrypt failed. Run this program in the correct machine."));
     }
 
     let decrypted = unsafe {
@@ -130,5 +132,5 @@ fn decrypt(encrypted: &str) -> String {
             data_out.cbData as usize)
     };
 
-    return decrypted;
+    return Ok(decrypted);
 }
