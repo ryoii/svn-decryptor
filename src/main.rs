@@ -2,6 +2,7 @@ use std::{env, fs, ptr};
 use winapi::um::dpapi::CryptUnprotectData;
 use winapi::um::wincrypt::DATA_BLOB;
 use std::collections::{hash_map, HashMap};
+use std::io::{Read, Write};
 use anyhow::{anyhow, Result};
 
 macro_rules! ok_or_continue {
@@ -46,6 +47,9 @@ fn main() -> Result<()> {
         }
     }
 
+    print!("Press any key to continue...");
+    std::io::stdout().flush().unwrap();
+    std::io::stdin().read(&mut [0u8]).unwrap();
     Ok(())
 }
 
