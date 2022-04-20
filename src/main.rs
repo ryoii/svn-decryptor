@@ -4,6 +4,15 @@ use winapi::um::wincrypt::DATA_BLOB;
 use std::collections::{hash_map, HashMap};
 use anyhow::{anyhow, Result};
 
+macro_rules! ok_or_continue {
+    ($expr:expr) => {
+        match $expr {
+            Result::Ok(v) => v,
+            Result::Err(_) => continue,
+        }
+    };
+}
+
 fn main() -> Result<()> {
     let app_data_fold = env::var_os("APPDATA")
         .ok_or(anyhow!("Can't find environment value: APPDATA"))?
@@ -12,15 +21,30 @@ fn main() -> Result<()> {
     let auth_fold = app_data_fold + "\\Subversion\\auth\\svn.simple";
 
     let dir = fs::read_dir(&auth_fold)?;
+    let mut res = Vec::new();
 
     for path in dir {
-        let data = fs::read_to_string(path.unwrap().path())?;
+        let path = path?;
+        if path.metadata()?.is_dir() {
+            continue;
+        }
 
-        let auth_file = AuthFile::from_raw_context(&data)?;
-        let password = decrypt(auth_file.password()?)?;
+        let data = ok_or_continue!(fs::read_to_string(path.path()));
+        let auth_file = ok_or_continue!(AuthFile::from_raw_context(&data));
+        let username = ok_or_continue!(auth_file.username());
+        let password = ok_or_continue!(auth_file.password());
+        let password = ok_or_continue!(decrypt(password));
 
-        println!("{}\r\n{}", auth_file.username()?, password);
+        res.push((String::from(username), password));
     };
+
+    if res.is_empty() {
+        println!("No auth file found.");
+    } else {
+        for (username, password) in res {
+            println!("{}\r\n{}", username, password);
+        }
+    }
 
     Ok(())
 }
