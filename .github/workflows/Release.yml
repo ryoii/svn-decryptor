@@ -31,7 +31,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: svn-decryptor-${{ steps.tag.outputs.tag }}
+          release_name: svn-decrypter-${{ steps.tag.outputs.tag }}
           draft: false
           prerelease: false
 
@@ -41,6 +41,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create-release.outputs.upload_url }}
-          asset_path: target/release/svn-decryptor.exe
-          asset_name: svn-decryptor-${{ steps.tag.outputs.tag }}.exe
+          asset_path: target/release/svn-decrypter.exe
+          asset_name: svn-decrypter-${{ steps.tag.outputs.tag }}.exe
           asset_content_type: application/octet-stream

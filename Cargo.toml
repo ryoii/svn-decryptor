@@ -1,5 +1,5 @@
 [package]
-name = "svn-decryptor"
+name = "svn-decrypter"
 version = "1.0.0"
 authors = ["ryoii"]
 edition = "2021"
