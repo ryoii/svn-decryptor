@@ -55,7 +55,7 @@ fn main() -> Result<()> {
 
 #[derive(Debug)]
 struct AuthFile {
-    opt: hash_map::HashMap<String, String>,
+    opt: HashMap<String, String>,
 }
 
 #[derive(Copy, Clone)]
